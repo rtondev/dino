@@ -73,7 +73,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     router.push('/notifications');
   };
 
-  if (!isAuthenticated || !user) {
+  if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#42026F]/5 to-[#42026F]/10">
         <div className="text-center">
@@ -82,6 +82,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       </div>
     );
+  }
+
+  if (!isAuthenticated || !user) {
+    return null;
   }
 
   return (
@@ -96,9 +100,11 @@ export default function AppLayout({ children }: AppLayoutProps) {
           <header className="bg-white border-b border-gray-200 px-4 lg:px-6" style={{ height: '72.8px' }}>
             <div className="flex items-center justify-between h-full">
               <div className="flex items-center space-x-4">
-                <h1 className="text-lg font-semibold text-gray-900">
-                  Dino App
-                </h1>
+                <img 
+                  src="/logo-name.svg" 
+                  alt="Dino App" 
+                  className="h-6 w-auto"
+                />
               </div>
               
               <div className="flex items-center space-x-4">

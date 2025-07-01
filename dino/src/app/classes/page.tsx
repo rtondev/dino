@@ -8,7 +8,6 @@ import { toast } from 'react-hot-toast';
 import AppLayout from '@/components/layout/AppLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
-import Input from '@/components/ui/Input';
 import JoinClassModal from '@/components/classes/JoinClassModal';
 import CreateClassModal from '@/components/classes/CreateClassModal';
 import { useRouter } from 'next/navigation';
@@ -18,6 +17,7 @@ interface ClassWithDetails extends Class {
   professor_name: string;
   student_count: number;
   is_professor: boolean;
+  is_collaborator: boolean;
 }
 
 export default function ClassesPage() {
@@ -38,7 +38,8 @@ export default function ClassesPage() {
           ...cls,
           professor_name: cls.professor_name || `Prof. ${cls.professor_id}`,
           student_count: 0, // TODO: Buscar contagem de alunos
-          is_professor: user?.user_type === 'professor' && cls.professor_id === user.id,
+          is_professor: user?.user_type === 'professor' && (cls.professor_id === user.id || cls.collaborator_id === user.id),
+          is_collaborator: user?.user_type === 'professor' && cls.collaborator_id === user.id,
         }));
         
         setClasses(classesWithDetails);
@@ -146,8 +147,12 @@ export default function ClassesPage() {
                         <p className="text-sm text-gray-600 mb-3">{cls.description}</p>
                       </div>
                       {cls.is_professor && (
-                        <span className="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full">
-                          Professor
+                        <span className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                          cls.is_collaborator 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-primary-100 text-primary-700'
+                        }`}>
+                          {cls.is_collaborator ? 'Colaborador' : 'Professor'}
                         </span>
                       )}
                     </div>
@@ -193,7 +198,7 @@ export default function ClassesPage() {
                           }
                         }}
                       >
-                        {cls.is_professor ? 'Gerenciar Turma' : 'Ver Detalhes'}
+                        {cls.is_professor ? (cls.is_collaborator ? 'Gerenciar Turma' : 'Gerenciar Turma') : 'Ver Detalhes'}
                       </Button>
                     </div>
                   </CardContent>

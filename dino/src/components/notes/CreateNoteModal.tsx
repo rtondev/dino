@@ -14,6 +14,11 @@ interface CreateNoteModalProps {
   onSuccess: () => void;
   presetContentType?: 'general' | 'apostila' | 'video' | 'activity';
   presetContentId?: number;
+  activity?: {
+    id: number;
+    title: string;
+    description: string;
+  } | null;
 }
 
 export default function CreateNoteModal({ 
@@ -21,7 +26,8 @@ export default function CreateNoteModal({
   onClose, 
   onSuccess, 
   presetContentType,
-  presetContentId 
+  presetContentId,
+  activity
 }: CreateNoteModalProps) {
   const [createForm, setCreateForm] = useState({
     title: '',
@@ -32,14 +38,24 @@ export default function CreateNoteModal({
 
   // Atualizar o formulário quando as props mudarem
   useEffect(() => {
-    if (presetContentType) {
+    if (activity) {
+      // Se há uma atividade, preencher automaticamente
+      setCreateForm(prev => ({
+        ...prev,
+        title: `Nota sobre: ${activity.title}`,
+        content: '',
+        content_type: 'activity',
+        content_id: activity.id
+      }));
+    } else if (presetContentType) {
+      // Se há tipo pré-definido, usar ele
       setCreateForm(prev => ({
         ...prev,
         content_type: presetContentType,
         content_id: presetContentId
       }));
     }
-  }, [presetContentType, presetContentId]);
+  }, [presetContentType, presetContentId, activity]);
 
   const handleSubmitCreate = async () => {
     if (!createForm.title.trim() || !createForm.content.trim()) {
@@ -71,8 +87,8 @@ export default function CreateNoteModal({
     setCreateForm({
       title: '',
       content: '',
-      content_type: presetContentType || 'general',
-      content_id: presetContentId
+      content_type: activity ? 'activity' : (presetContentType || 'general'),
+      content_id: activity ? activity.id : presetContentId
     });
   };
 
@@ -85,10 +101,21 @@ export default function CreateNoteModal({
     <Modal
       isOpen={isOpen}
       onClose={handleClose}
-      title="Criar Nova Nota"
+      title={activity ? "Criar Nota da Atividade" : "Criar Nova Nota"}
       size="lg"
     >
       <div className="space-y-4">
+        {activity && (
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+              <p className="text-sm font-medium text-blue-800">Vinculado à Atividade</p>
+            </div>
+            <p className="text-sm text-blue-700">{activity.title}</p>
+            <p className="text-xs text-blue-600 mt-1">{activity.description}</p>
+          </div>
+        )}
+        
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Título *
@@ -126,11 +153,11 @@ export default function CreateNoteModal({
               onChange={(e) => setCreateForm({ 
                 ...createForm, 
                 content_type: e.target.value as any,
-                content_id: presetContentId // Manter o ID pré-definido
+                content_id: activity ? activity.id : presetContentId // Manter o ID da atividade
               })}
-              disabled={!!presetContentType}
+              disabled={!!activity || !!presetContentType}
               className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#42026F] ${
-                presetContentType ? 'bg-gray-100 cursor-not-allowed' : ''
+                (activity || presetContentType) ? 'bg-gray-100 cursor-not-allowed' : ''
               }`}
             >
               <option value="general">Geral</option>
@@ -153,8 +180,8 @@ export default function CreateNoteModal({
                   content_id: e.target.value ? Number(e.target.value) : undefined 
                 })}
                 placeholder="ID do conteúdo"
-                disabled={!!presetContentId}
-                className={presetContentId ? 'bg-gray-100 cursor-not-allowed' : ''}
+                disabled={!!activity || !!presetContentId}
+                className={(activity || presetContentId) ? 'bg-gray-100 cursor-not-allowed' : ''}
               />
             </div>
           )}

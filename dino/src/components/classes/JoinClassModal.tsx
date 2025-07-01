@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { Code, BookOpen } from 'lucide-react';
 import { classesAPI } from '@/components/lib/api';
-import BaseModal from '@/components/ui/modals/BaseModal';
+import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -56,7 +56,7 @@ export default function JoinClassModal({ isOpen, onClose, onSuccess }: JoinClass
   };
 
   return (
-    <BaseModal
+    <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Entrar em Turma"
@@ -108,6 +108,6 @@ export default function JoinClassModal({ isOpen, onClose, onSuccess }: JoinClass
           </div>
         </form>
       </div>
-    </BaseModal>
+    </Modal>
   );
 } 

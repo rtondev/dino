@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { BookOpen, FileText, Users } from 'lucide-react';
 import { classesAPI } from '@/components/lib/api';
-import BaseModal from '@/components/ui/modals/BaseModal';
+import Modal from '@/components/ui/Modal';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 
@@ -58,7 +58,7 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
   };
 
   return (
-    <BaseModal
+    <Modal
       isOpen={isOpen}
       onClose={handleClose}
       title="Criar Nova Turma"
@@ -144,6 +144,6 @@ export default function CreateClassModal({ isOpen, onClose, onSuccess }: CreateC
           </div>
         </form>
       </div>
-    </BaseModal>
+    </Modal>
   );
 } 

@@ -7,7 +7,7 @@ import { classesAPI, activitiesAPI, Class, Activity } from '@/components/lib/api
 import { 
   ArrowLeft, Edit, Trash2, Users, Calendar, Code, RefreshCw, 
   Plus, BookOpen, UserPlus, UserMinus, Settings, AlertTriangle,
-  Copy, CheckCircle, Clock, BarChart3, FileText
+  Copy, CheckCircle, Clock, BarChart3, FileText, Info, Activity as ActivityIcon
 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import AppLayout from '@/components/layout/AppLayout';
@@ -94,6 +94,7 @@ export default function ClassDetailsPage() {
   const [deleting, setDeleting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [creatingActivity, setCreatingActivity] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
 
   const loadClassDetails = async () => {
     try {
@@ -118,15 +119,6 @@ export default function ClassDetailsPage() {
           is_collaborator: user?.user_type === 'professor' && classData.collaborator_id === user.id,
           professor_name: classData.professor_name || `Prof. ${classData.professor_id}`,
           collaborator_name: classData.collaborator_name || (classData.collaborator_id ? `Prof. ${classData.collaborator_id}` : undefined)
-        });
-
-        console.log('Frontend - Class Details:', {
-          user_id: user?.id,
-          user_type: user?.user_type,
-          professor_id: classData.professor_id,
-          collaborator_id: classData.collaborator_id,
-          is_professor: user?.user_type === 'professor' && classData.professor_id === user.id,
-          is_collaborator: user?.user_type === 'professor' && classData.collaborator_id === user.id
         });
 
         setEditData({
@@ -247,97 +239,34 @@ export default function ClassDetailsPage() {
   const handleCreateActivity = async () => {
     try {
       setCreatingActivity(true);
-      
-      console.log('Frontend - User:', user);
-      console.log('Frontend - User Type:', user?.user_type);
-      console.log('Frontend - Class ID:', id);
-      
-      // Validar dados
-      if (!createActivityData.title.trim() || !createActivityData.description.trim()) {
-        toast.error('Preencha título e descrição da atividade');
-        return;
-      }
-
-      if (createActivityData.questions.length < 5) {
-        toast.error('A atividade deve ter pelo menos 5 questões');
-        return;
-      }
-
-      // Validar questões
-      for (let i = 0; i < createActivityData.questions.length; i++) {
-        const question = createActivityData.questions[i];
-        if (!question.question_text.trim() || 
-            !question.option_a.trim() || 
-            !question.option_b.trim() || 
-            !question.option_c.trim() || 
-            !question.option_d.trim()) {
-          toast.error(`Questão ${i + 1} está incompleta`);
-          return;
-        }
-
-        // Para quiz e questionário, validar resposta correta
-        if (createActivityData.type !== 'enquete' && !question.correct_answer) {
-          toast.error(`Questão ${i + 1} deve ter uma resposta correta`);
-          return;
-        }
-      }
-
-      // Preparar questões para envio
-      const questionsToSend = createActivityData.questions.map(question => {
-        const questionData = {
-          question_text: question.question_text,
-          option_a: question.option_a,
-          option_b: question.option_b,
-          option_c: question.option_c,
-          option_d: question.option_d
-        };
-
-        // Só incluir correct_answer se não for enquete
-        if (createActivityData.type !== 'enquete') {
-          questionData.correct_answer = question.correct_answer;
-        }
-
-        return questionData;
-      });
-
       const response = await activitiesAPI.create({
-        class_id: Number(id),
-        title: createActivityData.title,
-        description: createActivityData.description,
-        type: createActivityData.type,
-        time_limit: createActivityData.time_limit * 60, // Converter para segundos
-        due_date: createActivityData.due_date || null,
-        questions: questionsToSend
+        ...createActivityData,
+        class_id: Number(id)
       });
-
+      
       if (response.success) {
         toast.success('Atividade criada com sucesso!');
         setShowCreateActivityModal(false);
-        // Resetar formulário
-        const resetQuestion = {
-          question_text: '',
-          option_a: '',
-          option_b: '',
-          option_c: '',
-          option_d: ''
-        };
-
-        // Só adicionar correct_answer se não for enquete
-        if (createActivityData.type !== 'enquete') {
-          resetQuestion.correct_answer = 'a';
-        }
-
         setCreateActivityData({
           title: '',
           description: '',
           type: 'quiz',
           time_limit: 30,
           due_date: '',
-          questions: [resetQuestion]
+          questions: [
+            {
+              question_text: '',
+              option_a: '',
+              option_b: '',
+              option_c: '',
+              option_d: '',
+              correct_answer: 'a'
+            }
+          ]
         });
         loadClassDetails();
       } else {
-        toast.error(response.message || 'Erro ao criar atividade');
+        toast.error('Erro ao criar atividade');
       }
     } catch (error: any) {
       console.error('Erro ao criar atividade:', error);
@@ -348,31 +277,23 @@ export default function ClassDetailsPage() {
   };
 
   const addQuestion = () => {
-    const newQuestion = {
-      question_text: '',
-      option_a: '',
-      option_b: '',
-      option_c: '',
-      option_d: ''
-    };
-
-    // Só adicionar correct_answer se não for enquete
-    if (createActivityData.type !== 'enquete') {
-      newQuestion.correct_answer = 'a';
-    }
-
     setCreateActivityData(prev => ({
       ...prev,
-      questions: [...prev.questions, newQuestion]
+      questions: [
+        ...prev.questions,
+        {
+          question_text: '',
+          option_a: '',
+          option_b: '',
+          option_c: '',
+          option_d: '',
+          correct_answer: 'a'
+        }
+      ]
     }));
   };
 
   const removeQuestion = (index: number) => {
-    if (createActivityData.questions.length <= 1) {
-      toast.error('A atividade deve ter pelo menos uma questão');
-      return;
-    }
-    
     setCreateActivityData(prev => ({
       ...prev,
       questions: prev.questions.filter((_, i) => i !== index)
@@ -382,39 +303,23 @@ export default function ClassDetailsPage() {
   const updateQuestion = (index: number, field: string, value: string) => {
     setCreateActivityData(prev => ({
       ...prev,
-      questions: prev.questions.map((question, i) => 
-        i === index ? { ...question, [field]: value } : question
+      questions: prev.questions.map((q, i) => 
+        i === index ? { ...q, [field]: value } : q
       )
     }));
   };
 
   const updateActivityType = (type: 'quiz' | 'enquete' | 'questionario') => {
-    setCreateActivityData(prev => {
-      const newQuestions = prev.questions.map(question => {
-        if (type === 'enquete') {
-          // Para enquete, remover correct_answer
-          const { correct_answer, ...questionWithoutCorrect } = question;
-          return questionWithoutCorrect;
-        } else {
-          // Para quiz/questionário, adicionar correct_answer se não existir
-          return {
-            ...question,
-            correct_answer: question.correct_answer || 'a'
-          };
-        }
-      });
-
-      return {
-        ...prev,
-        type,
-        questions: newQuestions
-      };
-    });
+    setCreateActivityData(prev => ({
+      ...prev,
+      type,
+      questions: type === 'enquete' ? [] : prev.questions
+    }));
   };
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Código copiado!');
+    toast.success('Código copiado para a área de transferência!');
   };
 
   const handleCreateNoteForActivity = (activity: Activity) => {
@@ -423,8 +328,8 @@ export default function ClassDetailsPage() {
   };
 
   const handleNoteCreated = () => {
-    // Recarregar dados se necessário
-    loadClassDetails();
+    setShowCreateNoteModal(false);
+    setSelectedActivityForNote(null);
   };
 
   const canManage = classDetails?.is_professor || classDetails?.is_collaborator;
@@ -457,9 +362,9 @@ export default function ClassDetailsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="max-w-6xl mx-auto py-8 px-4">
         {/* Header */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
             <Button
               variant="outline"
@@ -471,8 +376,8 @@ export default function ClassDetailsPage() {
               Voltar
             </Button>
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">{classDetails.name}</h1>
-              <p className="text-gray-600">{classDetails.description}</p>
+              <h1 className="text-3xl font-bold text-gray-900">{classDetails.name}</h1>
+              <p className="text-gray-600 mt-1">{classDetails.description}</p>
             </div>
           </div>
           
@@ -481,7 +386,7 @@ export default function ClassDetailsPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowEditModal(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <Edit className="h-4 w-4" />
                 Editar
@@ -489,7 +394,7 @@ export default function ClassDetailsPage() {
               <Button
                 variant="outline"
                 onClick={() => setShowDeleteModal(true)}
-                className="flex items-center gap-2 text-red-600 hover:text-red-700"
+                className="flex items-center gap-2 border-gray-300 text-red-600 hover:text-red-700 hover:bg-red-50"
               >
                 <Trash2 className="h-4 w-4" />
                 Excluir
@@ -498,212 +403,349 @@ export default function ClassDetailsPage() {
           )}
         </div>
 
-        {/* Class Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Código de Acesso</p>
-                  <p className="text-2xl font-bold text-gray-900">{classDetails.code}</p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => copyToClipboard(classDetails.code)}
-                  >
-                    <Copy className="h-4 w-4" />
-                  </Button>
-                  {canManage && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={handleRegenerateCode}
-                    >
-                      <RefreshCw className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
+        {/* Tabs Navigation */}
+        <div className="border-b border-gray-200 mb-8">
+          <nav className="flex space-x-8">
+            <button
+              onClick={() => setActiveTab('overview')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'overview'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Info className="h-4 w-4" />
+                Visão Geral
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Alunos</p>
-                  <p className="text-2xl font-bold text-gray-900">
-                    {classDetails.student_count}/{classDetails.max_students}
-                  </p>
-                </div>
-                <Users className="h-8 w-8 text-primary-600" />
+            </button>
+            <button
+              onClick={() => setActiveTab('students')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'students'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Users className="h-4 w-4" />
+                Alunos ({classDetails.students.length})
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Atividades</p>
-                  <p className="text-2xl font-bold text-gray-900">{classDetails.activities.length}</p>
-                </div>
-                <BookOpen className="h-8 w-8 text-primary-600" />
+            </button>
+            <button
+              onClick={() => setActiveTab('activities')}
+              className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                activeTab === 'activities'
+                  ? 'border-primary-500 text-primary-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <ActivityIcon className="h-4 w-4" />
+                Atividades ({classDetails.activities.length})
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Criada em</p>
-                  <p className="text-sm font-medium text-gray-900">
-                    {new Date(classDetails.created_at).toLocaleDateString('pt-BR')}
-                  </p>
-                </div>
-                <Calendar className="h-8 w-8 text-primary-600" />
-              </div>
-            </CardContent>
-          </Card>
+            </button>
+          </nav>
         </div>
 
-        {/* Professors Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Professores
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="font-medium">{classDetails.professor_name}</p>
-                  <p className="text-sm text-gray-600">Professor Principal</p>
-                </div>
-                <span className="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full">
-                  Principal
-                </span>
-              </div>
-              
-              {classDetails.collaborator_name ? (
-                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">{classDetails.collaborator_name}</p>
-                    <p className="text-sm text-gray-600">Professor Colaborador</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full">
-                      Colaborador
-                    </span>
-                    {canManage && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={handleRemoveCollaborator}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <UserMinus className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ) : canManage ? (
-                <div className="text-center py-4">
-                  <p className="text-gray-600 mb-2">Nenhum professor colaborador</p>
-                  <Button
-                    size="sm"
-                    onClick={() => setShowCollaboratorModal(true)}
-                    className="flex items-center gap-2"
-                  >
-                    <UserPlus className="h-4 w-4" />
-                    Adicionar Colaborador
-                  </Button>
-                </div>
-              ) : (
-                <div className="text-center py-4">
-                  <p className="text-gray-600">Nenhum professor colaborador</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Students List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <Users className="h-5 w-5" />
-                Alunos ({classDetails.students.length})
-              </CardTitle>
-              <Button
-                variant="outline"
-                onClick={() => setShowStudentsModal(true)}
-              >
-                Ver Todos
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {classDetails.students.length === 0 ? (
-              <div className="text-center py-8">
-                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Nenhum aluno inscrito ainda</p>
-                <p className="text-sm text-gray-500 mt-1">
-                  Compartilhe o código de acesso para que os alunos possam se inscrever
-                </p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {classDetails.students.slice(0, 6).map((student) => (
-                  <div key={student.id} className="p-4 border rounded-lg">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="font-medium">{student.name}</p>
-                        <p className="text-sm text-gray-600">{student.email}</p>
-                        <p className="text-xs text-gray-500">{student.institution}</p>
+        {/* Tab Content */}
+        {activeTab === 'overview' && (
+          <div className="space-y-6">
+            {/* Class Info Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* Código de Acesso */}
+              <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Code className="h-4 w-4 text-blue-600" />
+                        <p className="text-xs font-semibold text-blue-700">Código de Acesso</p>
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-gray-500">
-                          Desde {new Date(student.joined_at).toLocaleDateString('pt-BR')}
+                      <div className="bg-white rounded-lg p-2 border border-blue-200 mb-2">
+                        <p className="text-lg font-mono font-bold text-blue-900 text-center tracking-wider">
+                          {classDetails.code}
                         </p>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => copyToClipboard(classDetails.code)}
+                          className="flex-1 bg-white hover:bg-blue-50 border-blue-300 text-blue-700 text-xs py-1"
+                        >
+                          <Copy className="h-3 w-3 mr-1" />
+                          Copiar
+                        </Button>
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleRegenerateCode}
+                            className="bg-white hover:bg-blue-50 border-blue-300 text-blue-700 text-xs py-1 px-2"
+                          >
+                            <RefreshCw className="h-3 w-3" />
+                          </Button>
+                        )}
                       </div>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              {/* Alunos */}
+              <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Users className="h-4 w-4 text-green-600" />
+                        <p className="text-xs font-semibold text-green-700">Alunos Inscritos</p>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-2xl font-bold text-green-900">
+                          {classDetails.student_count}
+                        </p>
+                        <p className="text-xs text-green-600">
+                          de {classDetails.max_students} vagas
+                        </p>
+                      </div>
+                      <div className="w-full bg-green-200 rounded-full h-1.5">
+                        <div 
+                          className="bg-green-600 h-1.5 rounded-full transition-all duration-300"
+                          style={{ width: `${(classDetails.student_count / classDetails.max_students) * 100}%` }}
+                        ></div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Atividades */}
+              <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <BookOpen className="h-4 w-4 text-purple-600" />
+                        <p className="text-xs font-semibold text-purple-700">Atividades</p>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-2xl font-bold text-purple-900">
+                          {classDetails.activities.length}
+                        </p>
+                        <p className="text-xs text-purple-600">
+                          {classDetails.activities.length === 0 
+                            ? 'Nenhuma atividade criada' 
+                            : classDetails.activities.length === 1 
+                              ? 'atividade criada' 
+                              : 'atividades criadas'
+                          }
+                        </p>
+                      </div>
+                      {canManage && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setShowCreateActivityModal(true)}
+                          className="w-full bg-white hover:bg-purple-50 border-purple-300 text-purple-700 text-xs py-1"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Criar Atividade
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Data de Criação */}
+              <Card className="bg-gradient-to-br from-orange-50 to-orange-100 border-orange-200">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Calendar className="h-4 w-4 text-orange-600" />
+                        <p className="text-xs font-semibold text-orange-700">Criada em</p>
+                      </div>
+                      <div className="mb-2">
+                        <p className="text-xl font-bold text-orange-900">
+                          {new Date(classDetails.created_at).toLocaleDateString('pt-BR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            year: 'numeric'
+                          })}
+                        </p>
+                        <p className="text-xs text-orange-600">
+                          {new Date(classDetails.created_at).toLocaleDateString('pt-BR', {
+                            weekday: 'long',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-xs text-orange-500">
+                        Há {Math.floor((Date.now() - new Date(classDetails.created_at).getTime()) / (1000 * 60 * 60 * 24))} dias
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Professors Info */}
+            <Card className="bg-white border-gray-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-gray-900">
+                  <Users className="h-4 w-4 text-gray-600" />
+                  <span className="text-sm">Equipe de Professores</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {/* Professor Principal */}
+                  <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
+                        <Users className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm">{classDetails.professor_name}</p>
+                        <p className="text-xs text-gray-600">Professor Principal</p>
+                      </div>
+                    </div>
+                    <span className="bg-gray-100 text-gray-700 text-xs px-2 py-1 rounded-full font-medium">
+                      Principal
+                    </span>
+                  </div>
+                  
+                  {/* Professor Colaborador */}
+                  {classDetails.collaborator_name ? (
+                    <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                          <Users className="h-4 w-4 text-blue-600" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-gray-900 text-sm">{classDetails.collaborator_name}</p>
+                          <p className="text-xs text-gray-600">Professor Colaborador</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-1 rounded-full font-medium">
+                          Colaborador
+                        </span>
+                        {canManage && (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={handleRemoveCollaborator}
+                            className="text-red-600 hover:text-red-700 border-red-300 hover:bg-red-50 text-xs py-1 px-2"
+                          >
+                            <UserMinus className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ) : canManage ? (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <UserPlus className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <p className="text-gray-600 text-xs mb-2">Nenhum professor colaborador</p>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowCollaboratorModal(true)}
+                        className="flex items-center gap-1 bg-gray-600 hover:bg-gray-700 text-xs py-1"
+                      >
+                        <UserPlus className="h-3 w-3" />
+                        Adicionar
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+                      <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-2">
+                        <Users className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <p className="text-gray-600 text-xs">Nenhum professor colaborador</p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {activeTab === 'students' && (
+          <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Alunos Inscritos</h2>
+              {classDetails.students.length > 6 && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setShowStudentsModal(true)}
+                >
+                  Ver Todos
+                </Button>
+              )}
+            </div>
+
+            {classDetails.students.length === 0 ? (
+              <Card>
+                <CardContent className="text-center py-12">
+                  <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhum aluno inscrito ainda</h3>
+                  <p className="text-gray-600">
+                    Compartilhe o código de acesso para que os alunos possam se inscrever
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {classDetails.students.slice(0, 6).map((student) => (
+                  <Card key={student.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium">{student.name}</p>
+                          <p className="text-sm text-gray-600">{student.email}</p>
+                          <p className="text-xs text-gray-500">{student.institution}</p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xs text-gray-500">
+                            Desde {new Date(student.joined_at).toLocaleDateString('pt-BR')}
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
                 ))}
                 {classDetails.students.length > 6 && (
-                  <div className="p-4 border rounded-lg text-center">
-                    <p className="text-sm text-gray-600">
-                      +{classDetails.students.length - 6} alunos
-                    </p>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setShowStudentsModal(true)}
-                      className="mt-2"
-                    >
-                      Ver Todos
-                    </Button>
-                  </div>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-gray-600">
+                        +{classDetails.students.length - 6} alunos
+                      </p>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setShowStudentsModal(true)}
+                        className="mt-2"
+                      >
+                        Ver Todos
+                      </Button>
+                    </CardContent>
+                  </Card>
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
 
-        {/* Activities List */}
-        <Card>
-          <CardHeader>
+        {activeTab === 'activities' && (
+          <div className="space-y-6">
             <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-2">
-                <BookOpen className="h-5 w-5" />
-                Atividades ({classDetails.activities.length})
-              </CardTitle>
+              <h2 className="text-xl font-semibold text-gray-900">Atividades da Turma</h2>
               {canManage && (
                 <Button
                   onClick={() => setShowCreateActivityModal(true)}
@@ -714,67 +756,68 @@ export default function ClassDetailsPage() {
                 </Button>
               )}
             </div>
-          </CardHeader>
-          <CardContent>
+
             {classDetails.activities.length === 0 ? (
-              <div className="text-center py-8">
-                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-gray-600">Nenhuma atividade criada</p>
-                {canManage && (
-                  <p className="text-sm text-gray-500 mt-1">
-                    Crie atividades para engajar seus alunos
-                  </p>
-                )}
-              </div>
+              <Card>
+                <CardContent className="text-center py-12">
+                  <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma atividade criada</h3>
+                  {canManage && (
+                    <p className="text-gray-600">
+                      Crie atividades para engajar seus alunos
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
             ) : (
               <div className="space-y-4">
                 {classDetails.activities.slice(0, 5).map((activity) => (
-                  <div key={activity.id} className="p-4 border rounded-lg hover:bg-gray-50">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <h3 className="font-medium">{activity.title}</h3>
-                        <p className="text-sm text-gray-600">{activity.description}</p>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                          <span className="flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {activity.time_limit} min
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <BarChart3 className="h-3 w-3" />
-                            {activity.passing_score}% aprovação
-                          </span>
+                  <Card key={activity.id}>
+                    <CardContent className="p-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <h3 className="font-medium">{activity.title}</h3>
+                          <p className="text-sm text-gray-600">{activity.description}</p>
+                          <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {activity.time_limit} min
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <BarChart3 className="h-3 w-3" />
+                              {activity.passing_score}% aprovação
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              toast.success('Funcionalidade em desenvolvimento');
+                            }}
+                          >
+                            Ver Detalhes
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleCreateNoteForActivity(activity)}
+                            className="flex items-center gap-1"
+                          >
+                            <FileText className="h-3 w-3" />
+                            Criar Nota
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => {
-                            // TODO: Implementar modal de detalhes da atividade
-                            toast.success('Funcionalidade em desenvolvimento');
-                          }}
-                        >
-                          Ver Detalhes
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => handleCreateNoteForActivity(activity)}
-                          className="flex items-center gap-1"
-                        >
-                          <FileText className="h-3 w-3" />
-                          Criar Nota
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 ))}
                 {classDetails.activities.length > 5 && (
                   <div className="text-center pt-4">
                     <Button
                       variant="outline"
                       onClick={() => {
-                        // TODO: Implementar modal com todas as atividades
                         toast.success('Funcionalidade em desenvolvimento');
                       }}
                     >
@@ -784,11 +827,11 @@ export default function ClassDetailsPage() {
                 )}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        )}
       </div>
 
-      {/* Edit Class Modal */}
+      {/* Modals */}
       <Modal
         isOpen={showEditModal}
         onClose={() => setShowEditModal(false)}
@@ -854,33 +897,15 @@ export default function ClassDetailsPage() {
         </div>
       </Modal>
 
-      {/* Delete Class Modal */}
       <Modal
         isOpen={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
         title="Excluir Turma"
       >
         <div className="space-y-4">
-          <div className="flex items-center gap-3 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <AlertTriangle className="h-5 w-5 text-red-600" />
-            <div>
-              <p className="font-medium text-red-800">Atenção!</p>
-              <p className="text-sm text-red-700">
-                Você está prestes a excluir uma turma, tem certeza que quer continuar?
-              </p>
-            </div>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h4 className="font-medium text-gray-900 mb-2">Esta ação irá:</h4>
-            <ul className="text-sm text-gray-600 space-y-1">
-              <li>• Excluir permanentemente a turma "{classDetails.name}"</li>
-              <li>• Remover todos os alunos da turma</li>
-              <li>• Excluir todas as atividades e tentativas</li>
-              <li>• Excluir todo o progresso relacionado</li>
-            </ul>
-          </div>
-          
+          <p className="text-gray-600">
+            Tem certeza que deseja excluir esta turma? Esta ação não pode ser desfeita.
+          </p>
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleDeleteClass}
@@ -888,7 +913,7 @@ export default function ClassDetailsPage() {
               disabled={deleting}
               className="flex-1 bg-red-600 hover:bg-red-700"
             >
-              Sim, Excluir Turma
+              Excluir Turma
             </Button>
             <Button
               variant="outline"
@@ -902,17 +927,12 @@ export default function ClassDetailsPage() {
         </div>
       </Modal>
 
-      {/* Add Collaborator Modal */}
       <Modal
         isOpen={showCollaboratorModal}
         onClose={() => setShowCollaboratorModal(false)}
         title="Adicionar Professor Colaborador"
       >
         <div className="space-y-4">
-          <p className="text-gray-600">
-            Digite o email do professor que você deseja adicionar como colaborador.
-          </p>
-          
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Email do Professor
@@ -924,11 +944,9 @@ export default function ClassDetailsPage() {
               placeholder="professor@exemplo.com"
             />
           </div>
-          
           <div className="flex gap-3 pt-4">
             <Button
               onClick={handleAddCollaborator}
-              disabled={!collaboratorEmail}
               className="flex-1"
             >
               Adicionar Colaborador
@@ -944,279 +962,11 @@ export default function ClassDetailsPage() {
         </div>
       </Modal>
 
-      {/* Students Modal */}
-      <Modal
-        isOpen={showStudentsModal}
-        onClose={() => setShowStudentsModal(false)}
-        title={`Alunos - ${classDetails.name}`}
-        size="lg"
-      >
-        <div className="space-y-4">
-          {classDetails.students.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <p className="text-gray-600">Nenhum aluno inscrito</p>
-            </div>
-          ) : (
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {classDetails.students.map((student) => (
-                <div key={student.id} className="p-4 border rounded-lg">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">{student.name}</h4>
-                      <p className="text-sm text-gray-600">{student.email}</p>
-                      <p className="text-xs text-gray-500">{student.institution}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-gray-500">
-                        Inscrito em {new Date(student.joined_at).toLocaleDateString('pt-BR')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-          
-          <div className="pt-4 border-t">
-            <Button
-              variant="outline"
-              onClick={() => setShowStudentsModal(false)}
-              className="w-full"
-            >
-              Fechar
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Create Activity Modal */}
-      <Modal
-        isOpen={showCreateActivityModal}
-        onClose={() => setShowCreateActivityModal(false)}
-        title="Criar Nova Atividade"
-        size="xl"
-      >
-        <div className="space-y-6 max-h-[80vh] overflow-y-auto">
-          {/* Informações básicas */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium text-gray-900">Informações da Atividade</h3>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Título *
-              </label>
-              <Input
-                value={createActivityData.title}
-                onChange={(e) => setCreateActivityData({ ...createActivityData, title: e.target.value })}
-                placeholder="Digite o título da atividade"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Descrição *
-              </label>
-              <textarea
-                value={createActivityData.description}
-                onChange={(e) => setCreateActivityData({ ...createActivityData, description: e.target.value })}
-                placeholder="Descreva a atividade..."
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                rows={3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tipo *
-                </label>
-                <select
-                  value={createActivityData.type}
-                  onChange={(e) => updateActivityType(e.target.value as any)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                >
-                  <option value="quiz">Quiz</option>
-                  <option value="enquete">Enquete</option>
-                  <option value="questionario">Questionário</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Tempo Limite (minutos)
-                </label>
-                <Input
-                  type="number"
-                  value={createActivityData.time_limit}
-                  onChange={(e) => setCreateActivityData({ ...createActivityData, time_limit: Number(e.target.value) })}
-                  min="5"
-                  max="120"
-                  placeholder="30"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Data de Entrega
-                </label>
-                <Input
-                  type="datetime-local"
-                  value={createActivityData.due_date}
-                  onChange={(e) => setCreateActivityData({ ...createActivityData, due_date: e.target.value })}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Questões */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-medium text-gray-900">
-                Questões ({createActivityData.questions.length})
-              </h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={addQuestion}
-                className="flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Adicionar Questão
-              </Button>
-            </div>
-            
-            <div className="space-y-6">
-              {createActivityData.questions.map((question, index) => (
-                <div key={index} className="p-4 border border-gray-200 rounded-lg">
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-medium text-gray-900">Questão {index + 1}</h4>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeQuestion(index)}
-                      className="text-red-600 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Pergunta *
-                      </label>
-                      <textarea
-                        value={question.question_text}
-                        onChange={(e) => updateQuestion(index, 'question_text', e.target.value)}
-                        placeholder="Digite a pergunta..."
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                        rows={2}
-                      />
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {createActivityData.type === 'enquete' ? 'Opção 1' : 'Opção A'} *
-                        </label>
-                        <Input
-                          value={question.option_a}
-                          onChange={(e) => updateQuestion(index, 'option_a', e.target.value)}
-                          placeholder={createActivityData.type === 'enquete' ? 'Primeira opção' : 'Primeira opção'}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {createActivityData.type === 'enquete' ? 'Opção 2' : 'Opção B'} *
-                        </label>
-                        <Input
-                          value={question.option_b}
-                          onChange={(e) => updateQuestion(index, 'option_b', e.target.value)}
-                          placeholder={createActivityData.type === 'enquete' ? 'Segunda opção' : 'Segunda opção'}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {createActivityData.type === 'enquete' ? 'Opção 3' : 'Opção C'} *
-                        </label>
-                        <Input
-                          value={question.option_c}
-                          onChange={(e) => updateQuestion(index, 'option_c', e.target.value)}
-                          placeholder={createActivityData.type === 'enquete' ? 'Terceira opção' : 'Terceira opção'}
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          {createActivityData.type === 'enquete' ? 'Opção 4' : 'Opção D'} *
-                        </label>
-                        <Input
-                          value={question.option_d}
-                          onChange={(e) => updateQuestion(index, 'option_d', e.target.value)}
-                          placeholder={createActivityData.type === 'enquete' ? 'Quarta opção' : 'Quarta opção'}
-                        />
-                      </div>
-                    </div>
-                    
-                    {createActivityData.type !== 'enquete' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Resposta Correta *
-                        </label>
-                        <select
-                          value={question.correct_answer}
-                          onChange={(e) => updateQuestion(index, 'correct_answer', e.target.value)}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                        >
-                          <option value="a">A</option>
-                          <option value="b">B</option>
-                          <option value="c">C</option>
-                          <option value="d">D</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-          
-          <div className="flex gap-3 pt-4 border-t">
-            <Button
-              onClick={handleCreateActivity}
-              loading={creatingActivity}
-              disabled={creatingActivity}
-              className="flex-1"
-            >
-              Criar Atividade
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => setShowCreateActivityModal(false)}
-              disabled={creatingActivity}
-              className="flex-1"
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Create Note Modal */}
       <CreateNoteModal
         isOpen={showCreateNoteModal}
-        onClose={() => {
-          setShowCreateNoteModal(false);
-          setSelectedActivityForNote(null);
-        }}
+        onClose={() => setShowCreateNoteModal(false)}
         onSuccess={handleNoteCreated}
-        presetContentType="activity"
-        presetContentId={selectedActivityForNote?.id}
+        activity={selectedActivityForNote}
       />
     </AppLayout>
   );

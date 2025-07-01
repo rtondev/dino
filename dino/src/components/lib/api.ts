@@ -9,6 +9,39 @@ export const api = axios.create({
   },
 });
 
+// Interceptor para adicionar token de autorização automaticamente
+api.interceptors.request.use(
+  (config) => {
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor para tratar erros de autorização
+api.interceptors.response.use(
+  (response) => {
+    return response;
+  },
+  (error) => {
+    if (error.response?.status === 401) {
+      // Token expirado ou inválido
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 // Types
 export interface User {
   id: number;
@@ -27,6 +60,8 @@ export interface Class {
   code: string;
   professor_id: number;
   professor_name?: string;
+  collaborator_id?: number;
+  collaborator_name?: string;
   created_at: string;
   updated_at: string;
 }
@@ -105,17 +140,11 @@ export const authAPI = {
     return response.data;
   },
   updateProfile: async (data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put('/profile', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put('/auth/profile', data);
     return response.data;
   },
   changePassword: async (data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/change-password', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put('/auth/change-password', data);
     return response.data;
   },
 };
@@ -123,45 +152,43 @@ export const authAPI = {
 // Classes API
 export const classesAPI = {
   getAll: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get('/classes', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get('/classes');
     return response.data;
   },
   getById: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get(`/classes/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(`/classes/${id}`);
+    return response.data;
+  },
+  getStudents: async (id: number) => {
+    const response = await api.get(`/classes/${id}/students`);
     return response.data;
   },
   create: async (data: { name: string; description: string }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/classes', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/classes', data);
     return response.data;
   },
   join: async (code: string) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/classes/join', { code }, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/classes/join', { code });
     return response.data;
   },
   update: async (id: number, data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/classes/${id}`, data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/classes/${id}`, data);
     return response.data;
   },
   delete: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.delete(`/classes/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.delete(`/classes/${id}`);
+    return response.data;
+  },
+  regenerateCode: async (id: number) => {
+    const response = await api.post(`/classes/${id}/regenerate-code`);
+    return response.data;
+  },
+  addCollaborator: async (id: number, data: { collaborator_email: string }) => {
+    const response = await api.post(`/classes/${id}/collaborator`, data);
+    return response.data;
+  },
+  removeCollaborator: async (id: number, data: { collaborator_id: number }) => {
+    const response = await api.delete(`/classes/${id}/collaborator`, { data });
     return response.data;
   },
 };
@@ -169,46 +196,32 @@ export const classesAPI = {
 // Content API
 export const contentAPI = {
   getAll: async (classId?: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const url = classId ? `/content?class_id=${classId}` : '/content';
-    const response = await api.get(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(url);
+    return response.data;
+  },
+  getByClass: async (classId: number) => {
+    const response = await api.get(`/content?class_id=${classId}`);
     return response.data;
   },
   getById: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get(`/content/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(`/content/${id}`);
     return response.data;
   },
   create: async (data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/content', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/content', data);
     return response.data;
   },
   update: async (id: number, data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/content/${id}`, data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/content/${id}`, data);
     return response.data;
   },
   delete: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.delete(`/content/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.delete(`/content/${id}`);
     return response.data;
   },
   getStats: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get('/content/stats', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get('/content/stats');
     return response.data;
   },
 };
@@ -216,39 +229,28 @@ export const contentAPI = {
 // Activities API
 export const activitiesAPI = {
   getAll: async (classId?: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const url = classId ? `/activities?class_id=${classId}` : '/activities';
-    const response = await api.get(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(url);
+    return response.data;
+  },
+  getByClass: async (classId: number) => {
+    const response = await api.get(`/activities/class/${classId}`);
     return response.data;
   },
   getById: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get(`/activities/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(`/activities/${id}`);
     return response.data;
   },
   create: async (data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/activities', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/activities', data);
     return response.data;
   },
   update: async (id: number, data: any) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/activities/${id}`, data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/activities/${id}`, data);
     return response.data;
   },
   delete: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.delete(`/activities/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.delete(`/activities/${id}`);
     return response.data;
   },
 };
@@ -256,44 +258,33 @@ export const activitiesAPI = {
 // Notes API
 export const notesAPI = {
   getAll: async (classId?: number, contentId?: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     let url = '/notes';
     const params = new URLSearchParams();
     if (classId) params.append('class_id', classId.toString());
     if (contentId) params.append('content_id', contentId.toString());
     if (params.toString()) url += `?${params.toString()}`;
     
-    const response = await api.get(url, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(url);
+    return response.data;
+  },
+  getByClass: async (classId: number) => {
+    const response = await api.get(`/notes?class_id=${classId}`);
     return response.data;
   },
   getById: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get(`/notes/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get(`/notes/${id}`);
     return response.data;
   },
   create: async (data: { title: string; content: string; class_id?: number; content_id?: number }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/notes', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/notes', data);
     return response.data;
   },
   update: async (id: number, data: { title: string; content: string }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/notes/${id}`, data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/notes/${id}`, data);
     return response.data;
   },
   delete: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.delete(`/notes/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.delete(`/notes/${id}`);
     return response.data;
   },
 };
@@ -301,38 +292,23 @@ export const notesAPI = {
 // Notifications API
 export const notificationAPI = {
   getAll: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get('/notifications', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get('/notifications');
     return response.data;
   },
   getUnreadCount: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get('/notifications/unread-count', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get('/notifications/unread-count');
     return response.data;
   },
   markAsRead: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/notifications/${id}/read`, {}, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/notifications/${id}/read`, {});
     return response.data;
   },
   markAllAsRead: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put('/notifications/read-all', {}, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put('/notifications/read-all', {});
     return response.data;
   },
   delete: async (id: number) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.delete(`/notifications/${id}`, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.delete(`/notifications/${id}`);
     return response.data;
   },
 };
@@ -340,17 +316,11 @@ export const notificationAPI = {
 // Progress API
 export const progressAPI = {
   getByUser: async () => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.get('/progress', {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.get('/progress');
     return response.data;
   },
   update: async (contentId: number, data: { completed: boolean; progress_percentage: number }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.put(`/progress/${contentId}`, data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.put(`/progress/${contentId}`, data);
     return response.data;
   },
 };
@@ -358,10 +328,7 @@ export const progressAPI = {
 // Feedback API
 export const feedbackAPI = {
   create: async (data: { name: string; email: string; subject: string; message: string; }) => {
-    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-    const response = await api.post('/feedback', data, {
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    });
+    const response = await api.post('/feedback', data);
     return response.data;
   },
 }; 
