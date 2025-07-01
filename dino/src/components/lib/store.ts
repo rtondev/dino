@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_BASE_URL } from './api';
 
 interface User {
   id: number;
@@ -32,18 +33,39 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
     set({ user: null, isAuthenticated: false });
   },
-  updateUser: (user) => set((state) => ({ user: { ...state.user, ...user } })),
+  updateUser: (user) => set((state) => ({ user: { ...state.user, ...user } as User })),
   login: (user, token) => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('token', token);
     }
     set({ user, isAuthenticated: true });
   },
-  initialize: () => {
+  initialize: async () => {
     if (typeof window !== 'undefined') {
       const token = localStorage.getItem('token');
-      // Here you could validate the token with your API if needed
-      set({ isInitialized: true, isAuthenticated: !!token });
+      const apiUrl = API_BASE_URL;
+      if (token) {
+        try {
+          const response = await fetch(
+            apiUrl + '/auth/profile',
+            {
+              headers: { Authorization: `Bearer ${token}` },
+            }
+          );
+          const data = await response.json();
+          if (response.ok && data.success && data.data?.user) {
+            set({ user: data.data.user, isAuthenticated: true, isInitialized: true });
+          } else {
+            localStorage.removeItem('token');
+            set({ user: null, isAuthenticated: false, isInitialized: true });
+          }
+        } catch (e) {
+          localStorage.removeItem('token');
+          set({ user: null, isAuthenticated: false, isInitialized: true });
+        }
+      } else {
+        set({ user: null, isAuthenticated: false, isInitialized: true });
+      }
     } else {
       set({ isInitialized: true });
     }

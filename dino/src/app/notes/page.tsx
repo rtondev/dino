@@ -11,6 +11,7 @@ import Input from '@/components/ui/Input';
 import CreateNoteModal from '@/components/notes/CreateNoteModal';
 import EditNoteModal from '@/components/notes/EditNoteModal';
 import NoteDetailModal from '@/components/notes/NoteDetailModal';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 interface NoteWithDetails extends Note {
   content_preview?: string;
@@ -183,202 +184,206 @@ export default function NotesPage() {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#42026F] mx-auto"></div>
-            <p className="mt-4 text-gray-600">Carregando notas...</p>
-          </div>
-        </div>
-      </AppLayout>
-    );
-  }
-
-  return (
-    <AppLayout>
-      <div className="space-y-6 min-h-screen p-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Minhas Notas</h1>
-            <p className="text-gray-600">Crie, edite e organize suas anotações vinculadas a conteúdos.</p>
-          </div>
-          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
-            <Input
-              placeholder="Buscar nota..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full sm:w-64"
-            />
-            <Button 
-              onClick={handleCreateNote} 
-              className="flex items-center gap-2 px-6 py-2 whitespace-nowrap"
-            >
-              <Plus className="h-4 w-4" /> Nova Nota
-            </Button>
-          </div>
-        </div>
-
-        {/* Filtros */}
-        <div className="flex gap-2 mb-4 border-b border-gray-200 pb-2">
-          <Button
-            variant={filterType === 'all' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('all')}
-            className={filterType === 'all' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
-          >
-            Todas
-          </Button>
-          <Button
-            variant={filterType === 'activity' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('activity')}
-            className={filterType === 'activity' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
-          >
-            Atividades
-          </Button>
-          <Button
-            variant={filterType === 'apostila' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('apostila')}
-            className={filterType === 'apostila' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
-          >
-            Apostilas
-          </Button>
-          <Button
-            variant={filterType === 'video' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('video')}
-            className={filterType === 'video' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
-          >
-            Vídeos
-          </Button>
-          <Button
-            variant={filterType === 'general' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setFilterType('general')}
-            className={filterType === 'general' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
-          >
-            Gerais
-          </Button>
-        </div>
-
-        {/* Notes Grid */}
-        {loading ? (
+      <AuthGuard>
+        <AppLayout>
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#42026F] mx-auto"></div>
               <p className="mt-4 text-gray-600">Carregando notas...</p>
             </div>
           </div>
-        ) : filteredNotes.length === 0 ? (
-          <div className="text-center py-16">
-            <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma nota encontrada</h3>
-            <p className="text-gray-600">Crie sua primeira nota para começar a organizar seus estudos!</p>
-            <Button onClick={handleCreateNote} className="mt-4">
-              <Plus className="h-4 w-4" /> Nova Nota
+        </AppLayout>
+      </AuthGuard>
+    );
+  }
+
+  return (
+    <AuthGuard>
+      <AppLayout>
+        <div className="space-y-6 min-h-screen p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Minhas Notas</h1>
+              <p className="text-gray-600">Crie, edite e organize suas anotações vinculadas a conteúdos.</p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+              <Input
+                placeholder="Buscar nota..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full sm:w-64"
+              />
+              <Button 
+                onClick={handleCreateNote} 
+                className="flex items-center gap-2 px-6 py-2 whitespace-nowrap"
+              >
+                <Plus className="h-4 w-4" /> Nova Nota
+              </Button>
+            </div>
+          </div>
+
+          {/* Filtros */}
+          <div className="flex gap-2 mb-4 border-b border-gray-200 pb-2">
+            <Button
+              variant={filterType === 'all' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterType('all')}
+              className={filterType === 'all' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
+            >
+              Todas
+            </Button>
+            <Button
+              variant={filterType === 'activity' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterType('activity')}
+              className={filterType === 'activity' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
+            >
+              Atividades
+            </Button>
+            <Button
+              variant={filterType === 'apostila' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterType('apostila')}
+              className={filterType === 'apostila' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
+            >
+              Apostilas
+            </Button>
+            <Button
+              variant={filterType === 'video' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterType('video')}
+              className={filterType === 'video' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
+            >
+              Vídeos
+            </Button>
+            <Button
+              variant={filterType === 'general' ? 'primary' : 'ghost'}
+              size="sm"
+              onClick={() => setFilterType('general')}
+              className={filterType === 'general' ? 'bg-[#42026F]/10 text-[#42026F] hover:bg-[#42026F]/20' : ''}
+            >
+              Gerais
             </Button>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredNotes.map((note, idx) => (
-              <div key={note.id} className="bg-white rounded-xl shadow-sm p-5 transition-all border border-gray-100 hover:shadow-md">
-                <div className="flex items-center justify-between gap-2 mb-3">
-                  <div className="flex items-center gap-2">
-                    {getNoteIcon(note.content_type)}
-                    <span className="font-semibold text-lg text-gray-900 truncate">{note.title}</span>
-                  </div>
-                </div>
-                
-                <div className="mb-3">
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    {getNoteTypeLabel(note.content_type)}
-                  </span>
-                </div>
 
-                <div className="space-y-3">
-                  <p className="text-sm text-gray-700 whitespace-pre-line line-clamp-4 h-20 overflow-hidden">
-                    {note.content_preview || note.content}
-                  </p>
-                  
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-1">
-                      <span>{note.word_count || 0} palavras</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span>{formatDate(note.last_saved)}</span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-1 pt-2 border-t border-gray-100">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleViewNoteDetail(note)}
-                      className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
-                      title="Ver Detalhes"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDownloadNote(note)}
-                      className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
-                      title="Download"
-                    >
-                      <Download className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleEditNote(note)}
-                      className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
-                      title="Editar"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleDeleteNote(note)}
-                      className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
-                      title="Excluir"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
+          {/* Notes Grid */}
+          {loading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#42026F] mx-auto"></div>
+                <p className="mt-4 text-gray-600">Carregando notas...</p>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+            </div>
+          ) : filteredNotes.length === 0 ? (
+            <div className="text-center py-16">
+              <StickyNote className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Nenhuma nota encontrada</h3>
+              <p className="text-gray-600">Crie sua primeira nota para começar a organizar seus estudos!</p>
+              <Button onClick={handleCreateNote} className="mt-4">
+                <Plus className="h-4 w-4" /> Nova Nota
+              </Button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredNotes.map((note, idx) => (
+                <div key={note.id} className="bg-white rounded-xl shadow-sm p-5 transition-all border border-gray-100 hover:shadow-md">
+                  <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="flex items-center gap-2">
+                      {getNoteIcon(note.content_type)}
+                      <span className="font-semibold text-lg text-gray-900 truncate">{note.title}</span>
+                    </div>
+                  </div>
+                  
+                  <div className="mb-3">
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      {getNoteTypeLabel(note.content_type)}
+                    </span>
+                  </div>
 
-      {/* Create Note Modal */}
-      <CreateNoteModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={loadNotes}
-      />
+                  <div className="space-y-3">
+                    <p className="text-sm text-gray-700 whitespace-pre-line line-clamp-4 h-20 overflow-hidden">
+                      {note.content_preview || note.content}
+                    </p>
+                    
+                    <div className="flex items-center justify-between text-xs text-gray-500">
+                      <div className="flex items-center gap-1">
+                        <span>{note.word_count || 0} palavras</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span>{formatDate(note.last_saved)}</span>
+                      </div>
+                    </div>
 
-      {/* Detail Note Modal */}
-      <NoteDetailModal
-        isOpen={showDetailModal}
-        onClose={() => setShowDetailModal(false)}
-        note={selectedNote}
-        onDownload={handleDownloadNote}
-      />
+                    <div className="flex gap-1 pt-2 border-t border-gray-100">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleViewNoteDetail(note)}
+                        className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
+                        title="Ver Detalhes"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDownloadNote(note)}
+                        className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
+                        title="Download"
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditNote(note)}
+                        className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
+                        title="Editar"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteNote(note)}
+                        className="h-8 w-8 p-0 text-[#42026F] hover:text-[#42026F]/80 flex-1"
+                        title="Excluir"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Edit Note Modal */}
-      <EditNoteModal
-        isOpen={showEditModal}
-        onClose={() => setShowEditModal(false)}
-        onSuccess={loadNotes}
-        note={selectedNote}
-      />
-    </AppLayout>
+        {/* Create Note Modal */}
+        <CreateNoteModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={loadNotes}
+        />
+
+        {/* Detail Note Modal */}
+        <NoteDetailModal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          note={selectedNote}
+          onDownload={handleDownloadNote}
+        />
+
+        {/* Edit Note Modal */}
+        <EditNoteModal
+          isOpen={showEditModal}
+          onClose={() => setShowEditModal(false)}
+          onSuccess={loadNotes}
+          note={selectedNote}
+        />
+      </AppLayout>
+    </AuthGuard>
   );
 } 

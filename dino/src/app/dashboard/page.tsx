@@ -19,6 +19,7 @@ import AppLayout from '@/components/layout/AppLayout';
 import AuthGuard from '@/components/auth/AuthGuard';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
+import { api } from '@/components/lib/api';
 
 interface DashboardStats {
   totalClasses: number;
@@ -68,7 +69,11 @@ export default function DashboardPage() {
         // Para alunos
         const [classesResponse, activitiesResponse, contentResponse] = await Promise.all([
           classesAPI.getAll(),
-          activitiesAPI.getAppActivities(),
+          api.get('/app/activities', {
+            headers: typeof window !== 'undefined' && localStorage.getItem('token')
+              ? { Authorization: `Bearer ${localStorage.getItem('token')}` }
+              : {},
+          }),
           contentAPI.getStats(),
         ]);
 

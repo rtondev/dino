@@ -10,7 +10,7 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
 }
 
 const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, error, leftIcon, rightIcon, className, ...props }, ref) => {
+  ({ label, error, helperText, leftIcon, rightIcon, className, ...props }, ref) => {
     const inputClasses = `flex h-10 w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 placeholder-gray-500 focus:border-[#42026F] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#42026F] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${leftIcon ? 'pl-10' : ''} ${rightIcon ? 'pr-10' : ''} ${error ? 'border-red-500 focus-visible:ring-red-500' : ''} ${className || ''}`;
 
     return (
@@ -44,6 +44,9 @@ const Input = forwardRef<HTMLInputElement, InputProps>(
         </div>
         {error && (
           <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+        {helperText && !error && (
+          <p className="mt-1 text-sm text-gray-500">{helperText}</p>
         )}
       </div>
     );

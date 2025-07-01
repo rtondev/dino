@@ -251,17 +251,20 @@ export default function Sidebar() {
               <span>Notificações</span>
             </Link>
 
+            {/* Link para Usuários (apenas admin) */}
+            {user?.user_type === 'admin' && (
             <Link
-              href="/feedback"
+                href="/users"
               className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                pathname === '/feedback'
+                  pathname === '/users'
                   ? 'bg-[#42026F]/10 text-[#42026F]'
                   : 'text-gray-700 hover:bg-gray-100'
               }`}
             >
-              <MessageSquare className="h-5 w-5" />
-              <span>Feedback</span>
+                <Users className="h-5 w-5" />
+                <span>Usuários</span>
             </Link>
+            )}
           </nav>
 
           {/* Footer */}

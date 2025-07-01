@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { useRouter } from 'next/navigation';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 interface ContentWithProgress extends Content {
   progress_percentage?: number;
@@ -147,208 +148,212 @@ export default function ContentPage() {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Carregando conteúdo...</p>
+      <AuthGuard>
+        <AppLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Carregando conteúdo...</p>
+            </div>
           </div>
-        </div>
-      </AppLayout>
+        </AppLayout>
+      </AuthGuard>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Conteúdo</h1>
-            <p className="text-gray-600">
-              Explore apostilas, vídeos e links educacionais
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            {user?.user_type === 'professor' && (
-              <Button onClick={handleCreateContent} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Criar Conteúdo
-              </Button>
-            )}
-            <Button variant="outline" className="flex items-center gap-2">
-              <BarChart3 className="h-4 w-4" />
-              Ver Progresso
-            </Button>
-          </div>
-        </div>
-
-        {/* Filters */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <div className="flex-1">
-            <Input
-              placeholder="Buscar conteúdo..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              leftIcon={<Search className="h-4 w-4" />}
-            />
-          </div>
-          
-          <div className="flex gap-2">
-            <select
-              value={filterType}
-              onChange={(e) => setFilterType(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">Todos os tipos</option>
-              <option value="apostila">Apostilas</option>
-              <option value="video">Vídeos</option>
-              <option value="link">Links</option>
-            </select>
-            
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value as any)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            >
-              <option value="all">Todos os status</option>
-              <option value="not_started">Não iniciados</option>
-              <option value="in_progress">Em progresso</option>
-              <option value="completed">Completados</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Content Grid */}
-        {filteredContent.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {searchTerm ? 'Nenhum conteúdo encontrado' : 'Nenhum conteúdo disponível'}
-              </h3>
+    <AuthGuard>
+      <AppLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Conteúdo</h1>
               <p className="text-gray-600">
-                {searchTerm 
-                  ? 'Tente ajustar os filtros de busca'
-                  : 'Aguarde conteúdo ser adicionado pelos professores'
-                }
+                Explore apostilas, vídeos e links educacionais
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredContent.map((item) => (
-              <Card key={item.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-2">
-                        {getContentIcon(item.type)}
-                        <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
-                          {getContentTypeLabel(item.type)}
-                        </span>
-                        {!item.is_active && (
-                          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
-                            Inativo
+            </div>
+            
+            <div className="flex gap-3">
+              {user?.user_type === 'professor' && (
+                <Button onClick={handleCreateContent} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Conteúdo
+                </Button>
+              )}
+              <Button variant="outline" className="flex items-center gap-2">
+                <BarChart3 className="h-4 w-4" />
+                Ver Progresso
+              </Button>
+            </div>
+          </div>
+
+          {/* Filters */}
+          <div className="flex flex-col sm:flex-row gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Buscar conteúdo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                leftIcon={<Search className="h-4 w-4" />}
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <select
+                value={filterType}
+                onChange={(e) => setFilterType(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="all">Todos os tipos</option>
+                <option value="apostila">Apostilas</option>
+                <option value="video">Vídeos</option>
+                <option value="link">Links</option>
+              </select>
+              
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value as any)}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <option value="all">Todos os status</option>
+                <option value="not_started">Não iniciados</option>
+                <option value="in_progress">Em progresso</option>
+                <option value="completed">Completados</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Content Grid */}
+          {filteredContent.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'Nenhum conteúdo encontrado' : 'Nenhum conteúdo disponível'}
+                </h3>
+                <p className="text-gray-600">
+                  {searchTerm 
+                    ? 'Tente ajustar os filtros de busca'
+                    : 'Aguarde conteúdo ser adicionado pelos professores'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredContent.map((item) => (
+                <Card key={item.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-2">
+                          {getContentIcon(item.type)}
+                          <span className="text-xs bg-primary-100 text-primary-700 px-2 py-1 rounded-full">
+                            {getContentTypeLabel(item.type)}
                           </span>
-                        )}
+                          {!item.is_active && (
+                            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded-full">
+                              Inativo
+                            </span>
+                          )}
+                        </div>
+                        <CardTitle className="text-lg mb-2">{item.title}</CardTitle>
+                        <p className="text-sm text-gray-600 mb-3">{item.description}</p>
                       </div>
-                      <CardTitle className="text-lg mb-2">{item.title}</CardTitle>
-                      <p className="text-sm text-gray-600 mb-3">{item.description}</p>
+                      {item.is_completed && (
+                        <CheckCircle className="h-6 w-6 text-green-500" />
+                      )}
                     </div>
-                    {item.is_completed && (
-                      <CheckCircle className="h-6 w-6 text-green-500" />
-                    )}
-                  </div>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="space-y-3">
-                    {item.duration && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Duração:</span>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className="font-medium">{item.duration} min</span>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {item.progress_percentage !== undefined && (
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-gray-600">Progresso:</span>
-                          <span className={`font-medium ${getProgressColor(item.progress_percentage)}`}>
-                            {item.progress_percentage}%
-                          </span>
-                        </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                          <div 
-                            className="bg-primary-600 h-2 rounded-full transition-all duration-300"
-                            style={{ width: `${item.progress_percentage}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    )}
-                    
-                    {item.last_accessed && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-gray-600">Último acesso:</span>
-                        <span>{new Date(item.last_accessed).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                    )}
-                  </div>
+                  </CardHeader>
                   
-                  <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                    <Button 
-                      className="w-full" 
-                      size="sm"
-                      onClick={() => handleOpenContent(item)}
-                      disabled={!item.is_active}
-                    >
-                      <Play className="h-4 w-4 mr-2" />
-                      {item.is_completed ? 'Rever Conteúdo' : 'Abrir Conteúdo'}
-                    </Button>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {item.duration && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Duração:</span>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-4 w-4 text-gray-400" />
+                            <span className="font-medium">{item.duration} min</span>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {item.progress_percentage !== undefined && (
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-gray-600">Progresso:</span>
+                            <span className={`font-medium ${getProgressColor(item.progress_percentage)}`}>
+                              {item.progress_percentage}%
+                            </span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className="bg-primary-600 h-2 rounded-full transition-all duration-300"
+                              style={{ width: `${item.progress_percentage}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {item.last_accessed && (
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Último acesso:</span>
+                          <span>{new Date(item.last_accessed).toLocaleDateString('pt-BR')}</span>
+                        </div>
+                      )}
+                    </div>
                     
-                    {!item.is_completed && item.progress_percentage && item.progress_percentage > 0 && (
+                    <div className="mt-4 pt-4 border-t border-gray-200 space-y-2">
                       <Button 
-                        variant="outline"
                         className="w-full" 
                         size="sm"
-                        onClick={() => handleMarkAsCompleted(item)}
+                        onClick={() => handleOpenContent(item)}
+                        disabled={!item.is_active}
                       >
-                        Marcar como Completado
+                        <Play className="h-4 w-4 mr-2" />
+                        {item.is_completed ? 'Rever Conteúdo' : 'Abrir Conteúdo'}
                       </Button>
-                    )}
-                    
-                    {user?.user_type === 'professor' && (
-                      <div className="flex gap-2">
+                      
+                      {!item.is_completed && item.progress_percentage && item.progress_percentage > 0 && (
                         <Button 
                           variant="outline"
-                          className="flex-1" 
+                          className="w-full" 
                           size="sm"
-                          onClick={() => handleEditContent(item)}
+                          onClick={() => handleMarkAsCompleted(item)}
                         >
-                          Editar
+                          Marcar como Completado
                         </Button>
-                        <Button 
-                          variant="outline"
-                          className="flex-1" 
-                          size="sm"
-                          onClick={() => handleDeleteContent(item)}
-                        >
-                          Excluir
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </AppLayout>
+                      )}
+                      
+                      {user?.user_type === 'professor' && (
+                        <div className="flex gap-2">
+                          <Button 
+                            variant="outline"
+                            className="flex-1" 
+                            size="sm"
+                            onClick={() => handleEditContent(item)}
+                          >
+                            Editar
+                          </Button>
+                          <Button 
+                            variant="outline"
+                            className="flex-1" 
+                            size="sm"
+                            onClick={() => handleDeleteContent(item)}
+                          >
+                            Excluir
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      </AppLayout>
+    </AuthGuard>
   );
 } 

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
 
 export const api = axios.create({
   baseURL: API_BASE_URL,
@@ -99,6 +99,7 @@ export const authAPI = {
     user_type: string;
     age?: number;
     institution?: string;
+    privacy_policy_accepted: boolean;
   }) => {
     const response = await api.post('/auth/register', data);
     return response.data;
@@ -203,6 +204,13 @@ export const contentAPI = {
     });
     return response.data;
   },
+  getStats: async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const response = await api.get('/content/stats', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
+  },
 };
 
 // Activities API
@@ -295,6 +303,13 @@ export const notificationAPI = {
   getAll: async () => {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     const response = await api.get('/notifications', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    return response.data;
+  },
+  getUnreadCount: async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const response = await api.get('/notifications/unread-count', {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     return response.data;

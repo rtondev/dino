@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
@@ -13,332 +13,200 @@ import AuthGuard from '@/components/auth/AuthGuard';
 import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import { Card, CardContent } from '@/components/ui/Card';
+import PasswordChecklist from '@/components/PasswordChecklist';
+import Step1UserEmail from './Step1UserEmail';
+import Step2Password from './Step2Password';
+import Step3Profile from './Step3Profile';
 
 interface RegisterFormData {
   username: string;
   email: string;
   password: string;
   confirmPassword: string;
-  user_type: 'aluno' | 'professor';
+  user_type: 'aluno' | 'professor' | 'admin';
   age: number;
   institution: string;
   privacy_policy_accepted: boolean;
 }
 
+const steps = [
+  'Dados de acesso',
+  'Senha',
+  'Perfil',
+];
+
+function ProgressBar({ step }: { step: number }) {
+  const percent = Math.round(((step + 1) / steps.length) * 100);
+  return (
+    <div className="w-full h-6 flex items-center bg-gray-200 relative mb-8" style={{height:24}}>
+      <div
+        className="bg-[#42026F] h-full transition-all duration-300"
+        style={{ width: `${percent}%` }}
+      />
+      <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-white font-bold text-sm drop-shadow">
+        {percent}%
+      </span>
+    </div>
+  );
+}
+
 export default function RegisterPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const initialStep = Number(searchParams.get('step')) || 0;
+  const [step, setStep] = useState(initialStep);
+  const [formData, setFormData] = useState<RegisterFormData>({
+    username: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
+    user_type: undefined as any,
+    age: undefined as any,
+    institution: '',
+    privacy_policy_accepted: false,
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const router = useRouter();
-  
   const { login } = useAuthStore();
+  const [errors, setErrors] = useState<any>({});
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    formState: { errors },
-  } = useForm<RegisterFormData>();
-
-  const password = watch('password');
-
-  const onSubmit = async (data: RegisterFormData) => {
-    // Validações
-    if (!validateEmail(data.email)) {
-      toast.error('Email inválido');
-      return;
+  // Validação por etapa
+  function validateStep(currentStep = step) {
+    const newErrors: any = {};
+    if (currentStep === 0) {
+      if (!formData.username || formData.username.length < 4) newErrors.username = 'Mínimo 4 caracteres';
+      if (!validateUsername(formData.username)) newErrors.username = 'Apenas letras, números e underscore';
+      if (!formData.email) newErrors.email = 'Email obrigatório';
+      if (!validateEmail(formData.email)) newErrors.email = 'Email inválido';
     }
-
-    const passwordValidation = validatePassword(data.password);
-    if (!passwordValidation.isValid) {
-      toast.error('Senha não atende aos requisitos');
-      return;
+    if (currentStep === 1) {
+      if (!formData.password) newErrors.password = 'Senha obrigatória';
+      if (!validatePassword(formData.password)) newErrors.password = 'Senha não atende aos requisitos';
+      if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não coincidem';
     }
-
-    const usernameValidation = validateUsername(data.username);
-    if (!usernameValidation.isValid) {
-      toast.error('Nome de usuário inválido');
-      return;
+    if (currentStep === 2) {
+      if (!formData.user_type) newErrors.user_type = 'Tipo obrigatório';
+      if (!formData.age || formData.age < 1 || formData.age > 120) newErrors.age = 'Idade inválida';
+      if (!formData.institution || formData.institution.length < 2) newErrors.institution = 'Instituição obrigatória';
+      if (!formData.privacy_policy_accepted) newErrors.privacy_policy_accepted = 'Aceite obrigatório';
     }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
 
-    if (data.password !== data.confirmPassword) {
-      toast.error('Senhas não coincidem');
-      return;
+  // Handlers
+  function handleNext() {
+    if (validateStep()) {
+      const nextStep = step + 1;
+      setStep(nextStep);
+      router.replace(`?step=${nextStep}`);
     }
-
-    if (!data.privacy_policy_accepted) {
-      toast.error('Você deve aceitar a política de privacidade');
-      return;
+  }
+  function handleBack() {
+    const prevStep = step - 1;
+    setStep(prevStep);
+    router.replace(`?step=${prevStep}`);
+  }
+  function handleChange(e: any) {
+    const { name, value, type, checked } = e.target;
+    let newValue = value;
+    if (name === 'username') {
+      newValue = value.replace(/\s/g, '_');
     }
-
+    setFormData(f => ({ ...f, [name]: type === 'checkbox' ? checked : newValue }));
+  }
+  async function handleSubmit(e: any) {
+    e.preventDefault();
+    if (!validateStep(2)) return;
     setIsLoading(true);
     try {
-      console.log('Tentando registrar usuário:', { 
-        username: data.username, 
-        email: data.email, 
-        user_type: data.user_type,
-        age: data.age,
-        institution: data.institution
-      });
-      
       const response = await authAPI.register({
-        username: data.username,
-        email: data.email,
-        password: data.password,
-        user_type: data.user_type,
-        age: data.age,
-        institution: data.institution,
-        privacy_policy_accepted: data.privacy_policy_accepted,
+        username: formData.username,
+        email: formData.email,
+        password: formData.password,
+        user_type: formData.user_type,
+        age: Number(formData.age),
+        institution: formData.institution,
+        privacy_policy_accepted: formData.privacy_policy_accepted,
       });
-      
       if (response.success) {
         login(response.data.user, response.data.tokens.token);
         toast.success('Conta criada com sucesso!');
         router.push('/dashboard');
       }
     } catch (error: any) {
-      console.error('Erro no registro:', error);
-      
-      // Tratamento específico para diferentes tipos de erro
-      if (error.response) {
-        const { status, data } = error.response;
-        
-        switch (status) {
-          case 400:
-            if (data.errors && Array.isArray(data.errors)) {
-              // Mostrar todos os erros de validação
-              data.errors.forEach((err: string) => toast.error(err));
-            } else {
-              toast.error(data.message || 'Dados inválidos');
-            }
-            break;
-          case 409:
-            toast.error('Email ou nome de usuário já existe');
-            break;
-          case 429:
-            toast.error('Muitas tentativas. Tente novamente em alguns minutos');
-            break;
-          case 500:
-            toast.error('Erro no servidor. Tente novamente mais tarde');
-            break;
-          default:
-            toast.error(data.message || 'Erro ao criar conta');
-        }
-      } else if (error.request) {
-        // Erro de rede
-        toast.error('Erro de conexão. Verifique sua internet');
-      } else {
-        // Erro geral
-        toast.error('Erro inesperado. Tente novamente');
-      }
+      toast.error('Erro ao criar conta');
     } finally {
       setIsLoading(false);
     }
-  };
+  }
+
+  // Sincronizar step com query string ao navegar manualmente
+  useEffect(() => {
+    const urlStep = Number(searchParams.get('step'));
+    if (!isNaN(urlStep) && urlStep !== step) {
+      setStep(urlStep);
+    }
+  }, [searchParams, step]);
 
   return (
     <AuthGuard requireAuth={false}>
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-12 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-md w-full space-y-8">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-primary-50 to-primary-100 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="fixed top-0 left-0 w-full z-50">
+          <ProgressBar step={step} />
+        </div>
+        <div className="max-w-md w-full space-y-8 pt-20"> {/* pt-20 para não cobrir o conteúdo */}
+          <Card>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Logo, título e subtítulo no topo */}
           <div className="text-center">
-            <div className="mx-auto h-12 w-12 bg-primary-600 rounded-lg flex items-center justify-center">
+                  <div className="mx-auto h-12 w-12 flex items-center justify-center">
               <img src="/logo.svg" alt="Dino Logo" className="h-8 w-8" />
             </div>
             <h2 className="mt-6 text-3xl font-bold text-gray-900">Dino App</h2>
             <p className="mt-2 text-sm text-gray-600">
-              Crie sua conta
-            </p>
-          </div>
-
-          <Card>
-            <CardContent>
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-                <Input
-                  label="Nome de usuário"
-                  type="text"
-                  leftIcon={<User className="h-4 w-4" />}
-                  error={errors.username?.message}
-                  {...register('username', {
-                    required: 'Nome de usuário é obrigatório',
-                    minLength: { value: 4, message: 'Mínimo 4 caracteres' },
-                    maxLength: { value: 50, message: 'Máximo 50 caracteres' },
-                    pattern: {
-                      value: /^[a-zA-Z0-9_]+$/,
-                      message: 'Apenas letras, números e underscore',
-                    },
-                  })}
-                  placeholder="seu_usuario"
-                  helperText="4-50 caracteres, apenas letras, números e underscore"
-                />
-
-                <Input
-                  label="Email"
-                  type="email"
-                  leftIcon={<Mail className="h-4 w-4" />}
-                  error={errors.email?.message}
-                  {...register('email', {
-                    required: 'Email é obrigatório',
-                    validate: (value) => validateEmail(value) || 'Email inválido',
-                  })}
-                  placeholder="seu@email.com"
-                />
-
-                <div className="relative">
-                  <Input
-                    label="Senha"
-                    type={showPassword ? 'text' : 'password'}
-                    leftIcon={<Lock className="h-4 w-4" />}
-                    rightIcon={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        {showPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    }
-                    error={errors.password?.message}
-                    {...register('password', {
-                      required: 'Senha é obrigatória',
-                      minLength: { value: 6, message: 'Mínimo 6 caracteres' },
-                      maxLength: { value: 12, message: 'Máximo 12 caracteres' },
-                      pattern: {
-                        value: /^(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#$%^&*(),.?":{}|<>])/,
-                        message: 'Deve conter minúscula, maiúscula e caractere especial',
-                      },
-                    })}
-                    placeholder="Sua senha"
-                    helperText="6-12 caracteres, com minúscula, maiúscula e caractere especial"
-                  />
+                    {step === 0 && 'Crie sua conta'}
+                    {step === 1 && 'Defina uma senha segura'}
+                    {step === 2 && 'Complete seu perfil'}
+                  </p>
                 </div>
-
-                <div className="relative">
-                  <Input
-                    label="Confirmar senha"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    leftIcon={<Lock className="h-4 w-4" />}
-                    rightIcon={
-                      <button
-                        type="button"
-                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
-                        ) : (
-                          <Eye className="h-4 w-4" />
-                        )}
-                      </button>
-                    }
-                    error={errors.confirmPassword?.message}
-                    {...register('confirmPassword', {
-                      required: 'Confirmação de senha é obrigatória',
-                      validate: (value) => value === password || 'Senhas não coincidem',
-                    })}
-                    placeholder="Confirme sua senha"
+                {step === 0 && (
+                  <Step1UserEmail formData={formData} errors={errors} onChange={handleChange} />
+                )}
+                {step === 1 && (
+                  <Step2Password
+                    formData={formData}
+                    errors={errors}
+                    onChange={handleChange}
+                    showPassword={showPassword}
+                    setShowPassword={setShowPassword}
+                    showConfirmPassword={showConfirmPassword}
+                    setShowConfirmPassword={setShowConfirmPassword}
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Tipo de usuário
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        value="aluno"
-                        {...register('user_type', { required: 'Tipo de usuário é obrigatório' })}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">Aluno</span>
-                    </label>
-                    <label className="flex items-center p-3 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                      <input
-                        type="radio"
-                        value="professor"
-                        {...register('user_type', { required: 'Tipo de usuário é obrigatório' })}
-                        className="mr-2"
-                      />
-                      <span className="text-sm">Professor</span>
-                    </label>
-                  </div>
-                  {errors.user_type && (
-                    <p className="mt-1 text-sm text-error-600">{errors.user_type.message}</p>
+                )}
+                {step === 2 && (
+                  <Step3Profile formData={formData} errors={errors} onChange={handleChange} />
+                )}
+                <div className="flex justify-between mt-8">
+                  {step > 0 && (
+                    <Button type="button" variant="outline" onClick={handleBack}>
+                      Voltar
+                    </Button>
+                  )}
+                  {step < 2 && (
+                    <Button type="button" onClick={handleNext}>
+                      Próximo
+                    </Button>
+                  )}
+                  {step === 2 && (
+                    <Button type="submit" loading={isLoading}>
+                      Cadastrar
+                    </Button>
                   )}
                 </div>
-
-                <Input
-                  label="Idade"
-                  type="number"
-                  leftIcon={<Calendar className="h-4 w-4" />}
-                  error={errors.age?.message}
-                  {...register('age', {
-                    required: 'Idade é obrigatória',
-                    min: { value: 1, message: 'Idade deve ser maior que 0' },
-                    max: { value: 120, message: 'Idade deve ser menor que 120' },
-                  })}
-                  placeholder="25"
-                  min="1"
-                  max="120"
-                />
-
-                <Input
-                  label="Instituição"
-                  type="text"
-                  leftIcon={<Building className="h-4 w-4" />}
-                  error={errors.institution?.message}
-                  {...register('institution', {
-                    required: 'Instituição é obrigatória',
-                    minLength: { value: 2, message: 'Mínimo 2 caracteres' },
-                    maxLength: { value: 100, message: 'Máximo 100 caracteres' },
-                  })}
-                  placeholder="Universidade Federal"
-                />
-
-                <div className="flex items-start">
-                  <div className="flex items-center h-5">
-                    <input
-                      type="checkbox"
-                      {...register('privacy_policy_accepted', {
-                        required: 'Você deve aceitar a política de privacidade',
-                      })}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                  </div>
-                  <div className="ml-3 text-sm">
-                    <label className="text-gray-700">
-                      Eu aceito a{' '}
-                      <Link
-                        href="/privacy-policy"
-                        className="text-primary-600 hover:text-primary-500"
-                        target="_blank"
-                      >
-                        política de privacidade
-                      </Link>
-                    </label>
-                    {errors.privacy_policy_accepted && (
-                      <p className="mt-1 text-sm text-error-600">
-                        {errors.privacy_policy_accepted.message}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="w-full"
-                  loading={isLoading}
-                  disabled={isLoading}
-                >
-                  Criar conta
-                </Button>
-              </form>
-
+                {step === 0 && (
               <div className="mt-6">
                 <div className="relative">
                   <div className="absolute inset-0 flex items-center">
@@ -350,7 +218,6 @@ export default function RegisterPage() {
                     </span>
                   </div>
                 </div>
-
                 <div className="mt-6">
                   <Link href="/login">
                     <Button variant="outline" className="w-full">
@@ -359,6 +226,8 @@ export default function RegisterPage() {
                   </Link>
                 </div>
               </div>
+                )}
+              </form>
             </CardContent>
           </Card>
         </div>

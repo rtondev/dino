@@ -13,26 +13,39 @@ export default function AuthGuard({ children, requireAuth = true }: AuthGuardPro
   const router = useRouter();
   const { isAuthenticated, isInitialized, initialize } = useAuthStore();
 
+  // Redireciona imediatamente se não houver token
   useEffect(() => {
-    // Inicializar autenticação na primeira renderização
+    if (requireAuth && typeof window !== 'undefined') {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        const currentPath = window.location.pathname;
+        router.replace(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
+      }
+    }
+  }, [requireAuth, router]);
+
+  // Inicializa autenticação
+  useEffect(() => {
     if (!isInitialized) {
       initialize();
     }
   }, [isInitialized, initialize]);
 
+  // Redireciona se não autenticado após inicialização
   useEffect(() => {
-    // Aguardar a inicialização antes de fazer redirecionamentos
     if (!isInitialized) return;
-
     if (requireAuth && !isAuthenticated) {
       const currentPath = window.location.pathname;
-      router.push(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
+      router.replace(`/login?returnUrl=${encodeURIComponent(currentPath)}`);
     } else if (!requireAuth && isAuthenticated) {
-      router.push('/classes');
+      router.replace('/classes');
     }
   }, [isAuthenticated, isInitialized, requireAuth, router]);
 
-  // Mostrar loading enquanto inicializa
+  // Mostrar loading enquanto inicializa, exceto se não houver token
+  if (requireAuth && typeof window !== 'undefined' && !localStorage.getItem('token')) {
+    return null; // Evita loading infinito se não houver token
+  }
   if (!isInitialized) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#42026F]/5 to-[#42026F]/10">

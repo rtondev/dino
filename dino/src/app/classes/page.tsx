@@ -12,6 +12,7 @@ import Input from '@/components/ui/Input';
 import JoinClassModal from '@/components/classes/JoinClassModal';
 import CreateClassModal from '@/components/classes/CreateClassModal';
 import { useRouter } from 'next/navigation';
+import AuthGuard from '@/components/auth/AuthGuard';
 
 interface ClassWithDetails extends Class {
   professor_name: string;
@@ -74,143 +75,147 @@ export default function ClassesPage() {
 
   if (loading) {
     return (
-      <AppLayout>
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
-            <p className="mt-4 text-gray-600">Carregando turmas...</p>
+      <AuthGuard>
+        <AppLayout>
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto"></div>
+              <p className="mt-4 text-gray-600">Carregando turmas...</p>
+            </div>
           </div>
-        </div>
-      </AppLayout>
+        </AppLayout>
+      </AuthGuard>
     );
   }
 
   return (
-    <AppLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Turmas</h1>
-            <p className="text-gray-600">
-              {user?.user_type === 'professor' 
-                ? 'Gerencie suas turmas e acompanhe o progresso dos alunos'
-                : 'Explore turmas disponíveis e acompanhe suas inscrições'
-              }
-            </p>
-          </div>
-          
-          <div className="flex gap-3">
-            {user?.user_type === 'professor' ? (
-              <Button onClick={handleCreateClass} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Criar Turma
-              </Button>
-            ) : (
-              <Button onClick={handleJoinClass} className="flex items-center gap-2">
-                <Plus className="h-4 w-4" />
-                Entrar em Turma
-              </Button>
-            )}
-          </div>
-        </div>
-
-        {/* Classes Grid */}
-        {classes.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Nenhuma turma disponível
-              </h3>
+    <AuthGuard>
+      <AppLayout>
+        <div className="space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Turmas</h1>
               <p className="text-gray-600">
-                {user?.user_type === 'professor'
-                  ? 'Crie sua primeira turma para começar'
-                  : 'Entre em uma turma para começar a aprender'
+                {user?.user_type === 'professor' 
+                  ? 'Gerencie suas turmas e acompanhe o progresso dos alunos'
+                  : 'Explore turmas disponíveis e acompanhe suas inscrições'
                 }
               </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {classes.map((cls) => (
-              <Card key={cls.id} className="hover:shadow-lg transition-shadow">
-                <CardHeader>
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <CardTitle className="text-lg mb-2">{cls.name}</CardTitle>
-                      <p className="text-sm text-gray-600 mb-3">{cls.description}</p>
+            </div>
+            
+            <div className="flex gap-3">
+              {user?.user_type === 'professor' ? (
+                <Button onClick={handleCreateClass} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Criar Turma
+                </Button>
+              ) : (
+                <Button onClick={handleJoinClass} className="flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Entrar em Turma
+                </Button>
+              )}
+            </div>
+          </div>
+
+          {/* Classes Grid */}
+          {classes.length === 0 ? (
+            <Card>
+              <CardContent className="text-center py-12">
+                <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Nenhuma turma disponível
+                </h3>
+                <p className="text-gray-600">
+                  {user?.user_type === 'professor'
+                    ? 'Crie sua primeira turma para começar'
+                    : 'Entre em uma turma para começar a aprender'
+                  }
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {classes.map((cls) => (
+                <Card key={cls.id} className="hover:shadow-lg transition-shadow">
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <CardTitle className="text-lg mb-2">{cls.name}</CardTitle>
+                        <p className="text-sm text-gray-600 mb-3">{cls.description}</p>
+                      </div>
+                      {cls.is_professor && (
+                        <span className="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full">
+                          Professor
+                        </span>
+                      )}
                     </div>
-                    {cls.is_professor && (
-                      <span className="bg-primary-100 text-primary-700 text-xs px-2 py-1 rounded-full">
-                        Professor
-                      </span>
-                    )}
-                  </div>
-                </CardHeader>
-                
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Código:</span>
-                      <span className="font-mono bg-gray-100 px-2 py-1 rounded text-gray-800">
-                        {cls.code}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Professor:</span>
-                      <span className="font-medium">{cls.professor_name}</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Alunos:</span>
-                      <div className="flex items-center gap-1">
-                        <Users className="h-4 w-4 text-gray-400" />
-                        <span className="font-medium">{cls.student_count}</span>
+                  </CardHeader>
+                  
+                  <CardContent>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Código:</span>
+                        <span className="font-mono bg-gray-100 px-2 py-1 rounded text-gray-800">
+                          {cls.code}
+                        </span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Professor:</span>
+                        <span className="font-medium">{cls.professor_name}</span>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Alunos:</span>
+                        <div className="flex items-center gap-1">
+                          <Users className="h-4 w-4 text-gray-400" />
+                          <span className="font-medium">{cls.student_count}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-gray-600">Criada em:</span>
+                        <span>{new Date(cls.created_at).toLocaleDateString('pt-BR')}</span>
                       </div>
                     </div>
                     
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Criada em:</span>
-                      <span>{new Date(cls.created_at).toLocaleDateString('pt-BR')}</span>
+                    <div className="mt-4 pt-4 border-t border-gray-200">
+                      <Button 
+                        className="w-full" 
+                        size="sm"
+                        onClick={() => {
+                          if (cls.is_professor) {
+                            router.push(`/classes/${cls.id}`);
+                          } else {
+                            // Se não for professor, pode mostrar detalhes simples ou nada
+                          }
+                        }}
+                      >
+                        {cls.is_professor ? 'Gerenciar Turma' : 'Ver Detalhes'}
+                      </Button>
                     </div>
-                  </div>
-                  
-                  <div className="mt-4 pt-4 border-t border-gray-200">
-                    <Button 
-                      className="w-full" 
-                      size="sm"
-                      onClick={() => {
-                        if (cls.is_professor) {
-                          router.push(`/classes/${cls.id}`);
-                        } else {
-                          // Se não for professor, pode mostrar detalhes simples ou nada
-                        }
-                      }}
-                    >
-                      {cls.is_professor ? 'Gerenciar Turma' : 'Ver Detalhes'}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
 
-      {/* Modals */}
-      <JoinClassModal
-        isOpen={showJoinModal}
-        onClose={() => setShowJoinModal(false)}
-        onSuccess={handleJoinSuccess}
-      />
-      
-      <CreateClassModal
-        isOpen={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSuccess={handleCreateSuccess}
-      />
-    </AppLayout>
+        {/* Modals */}
+        <JoinClassModal
+          isOpen={showJoinModal}
+          onClose={() => setShowJoinModal(false)}
+          onSuccess={handleJoinSuccess}
+        />
+        
+        <CreateClassModal
+          isOpen={showCreateModal}
+          onClose={() => setShowCreateModal(false)}
+          onSuccess={handleCreateSuccess}
+        />
+      </AppLayout>
+    </AuthGuard>
   );
 } 

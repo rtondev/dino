@@ -4,8 +4,8 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validatePassword = (password: string): boolean => {
-  // Password must be at least 8 characters long and contain at least one letter and one number
-  const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*?&]{8,}$/;
+  // 6-12 caracteres, pelo menos uma minúscula, uma maiúscula, um número e um caractere especial
+  const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*(),.?":{}|<>]).{6,12}$/;
   return passwordRegex.test(password);
 };
 

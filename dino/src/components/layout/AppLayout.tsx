@@ -85,7 +85,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       <div className="flex h-screen">
         {/* Sidebar */}
         <Sidebar />
@@ -154,7 +154,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
           </header>
 
           {/* Page content */}
-          <main className="flex-1 overflow-y-auto p-4 lg:p-6">
+          <main className="flex-1 overflow-y-auto p-4 lg:p-6 bg-white">
             {children}
           </main>
         </div>
